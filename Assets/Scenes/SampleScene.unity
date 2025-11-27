@@ -1554,15 +1554,15 @@ MonoBehaviour:
   score: 0
   turnCount: 0
   combo: 0
-  rows: 4
-  columns: 4
+  rows: 2
+  columns: 3
   spacing: 10
   audioSource: {fileID: 2125639848}
-  flipSound: {fileID: 8300000, guid: bf4223003a74e874a82c699806b594b8, type: 3}
+  flipSound: {fileID: 8300000, guid: d05349a85c177ba468605aed1caa2ab6, type: 3}
   matchSound: {fileID: 8300000, guid: bf4223003a74e874a82c699806b594b8, type: 3}
   mismatchSound: {fileID: 8300000, guid: bf4223003a74e874a82c699806b594b8, type: 3}
-  winSound: {fileID: 8300000, guid: bf4223003a74e874a82c699806b594b8, type: 3}
-  loseSound: {fileID: 8300000, guid: bf4223003a74e874a82c699806b594b8, type: 3}
+  winSound: {fileID: 8300000, guid: e0dfd9757e3a7094faa934aab99260a7, type: 3}
+  loseSound: {fileID: 8300000, guid: 36c722fa17b3b25438b2a218d502d916, type: 3}
 --- !u!4 &2125639847
 Transform:
   m_ObjectHideFlags: 0

@@ -13,21 +13,31 @@ public class Card : MonoBehaviour
 
     private bool isAnimating = false;
 
+    [HideInInspector] public bool hasLoadedState = false;
+
+
     void Start()
     {
+    if (!hasLoadedState)
+    {
+        cardImage.color = Color.white;
         cardImage.sprite = gameManager.cardBack;
+    }
     }
 
     public void FlipCard()
     {
-        if (isMatched || isAnimating) return;
+         if (gameManager.InitializationFailed) return; 
 
-        if (!isFlipped)
-        {
+        if (isMatched || isAnimating || isFlipped)
+            return;
+
+        // if (!isFlipped)
+        // {
             StartCoroutine(FlipAnimation(gameManager.cardFaces[cardId], true));
             gameManager.audioSource.PlayOneShot(gameManager.flipSound);
             gameManager.EnqueueFlippedCard(this);
-        }
+        // }
     }
 
     public IEnumerator FlipAnimation(Sprite newSprite, bool flipUp)
@@ -72,7 +82,7 @@ public class Card : MonoBehaviour
         }
 
         cardImage.color = Color.white;
-
+    transform.localScale = Vector3.one;
         isAnimating = false;
     }
 

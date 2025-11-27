@@ -22,6 +22,7 @@ public class Card : MonoBehaviour
             if(!isFlipped && (gameManager.firstCard == null || gameManager.secondCard == null))
             {
                 isFlipped = true;
+                        GameManagerCard.Instance.audioSource.PlayOneShot(GameManagerCard.Instance.flipSound);
                 cardImage.sprite = gameManager.cardFaces[cardId];
                 gameManager.CardFlipped(this);
             }

@@ -33,6 +33,15 @@ public TextMeshProUGUI scoreText;
 public TextMeshProUGUI turnText;
 public TextMeshProUGUI comboText;
 
+[Header("Audio Clips")]
+
+public AudioSource audioSource;
+public AudioClip flipSound;
+public AudioClip matchSound;
+public AudioClip mismatchSound;
+public AudioClip winSound;
+public AudioClip loseSound;
+
 
     private void Awake()
     {
@@ -138,6 +147,8 @@ void UpdateUI()
          turnCount++; 
         if (firstCard.cardId == secondCard.cardId)
         {
+                    audioSource.PlayOneShot(matchSound);
+
                     combo++;   // increase combo streak
 
         score += 10 * combo;
@@ -154,6 +165,8 @@ void UpdateUI()
         }
         else
         {
+                    audioSource.PlayOneShot(mismatchSound);
+
                     combo = 0; // reset combo on fail
 
         UpdateUI();
@@ -173,12 +186,16 @@ void UpdateUI()
     void GameOver()
     {
         isGameOver = true;
+            audioSource.PlayOneShot(loseSound);
+
         FinalPanel();
     }
 
     void LevelFinished()
     {
         isLevelFinished = true;
+            audioSource.PlayOneShot(winSound);
+
         FinalPanel();
     }
 

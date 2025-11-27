@@ -6,121 +6,190 @@ using TMPro;
 
 public class GameManagerCard : MonoBehaviour
 {
-
     public static GameManagerCard Instance;
+
+    [Header("Cards")]
     public Sprite cardBack;
     public Card cardPrefab;
     public Sprite[] cardFaces;
-    private List<Card> cards;
-    private List<int> cardIds;
-    public Card firstCard, secondCard;
+
+    private List<Card> cards = new List<Card>();
+    private List<int> cardIds = new List<int>();
+
+    [Header("UI")]
     public Transform cardHolder;
     public GameObject finalUI;
     public TextMeshProUGUI finalText;
     public TextMeshProUGUI TimerText;
+
+    public TextMeshProUGUI scoreText;
+    public TextMeshProUGUI turnText;
+    public TextMeshProUGUI comboText;
+
+    [Header("Game State")]
     private int pairsMatched;
     private int totalPairs;
+
     private float timer;
+    public float maxTime = 60f;
     private bool isGameOver;
     private bool isLevelFinished;
-    public float maxTime = 60f;
-
 
     public int score;
-public int turnCount;
-public int combo;
-public TextMeshProUGUI scoreText;
-public TextMeshProUGUI turnText;
-public TextMeshProUGUI comboText;
+    public int turnCount;
+    public int combo;
 
-[Header("Audio Clips")]
+    [Header("Grid Settings")]
+    public int rows = 4;
+    public int columns = 4;
+    public float spacing = 10f;
 
-public AudioSource audioSource;
-public AudioClip flipSound;
-public AudioClip matchSound;
-public AudioClip mismatchSound;
-public AudioClip winSound;
-public AudioClip loseSound;
+    [Header("Audio")]
+    public AudioSource audioSource;
+    public AudioClip flipSound;
+    public AudioClip matchSound;
+    public AudioClip mismatchSound;
+    public AudioClip winSound;
+    public AudioClip loseSound;
 
+    private Queue<Card> flipQueue = new Queue<Card>();
+    private bool isProcessing = false;
 
-    private void Awake()
+    void Awake()
     {
         Instance = this;
     }
-    // Start is called before the first frame update
+
     void Start()
     {
-        cards = new List<Card>();
-        cardIds = new List<int>();
-        pairsMatched = 0;
-        totalPairs = cardFaces.Length / 2;
+        finalUI.SetActive(false);
 
+        score = combo = turnCount = 0;
         timer = maxTime;
         isGameOver = false;
         isLevelFinished = false;
 
-        score = 0;
-turnCount = 0;
-combo = 0;
-
-UpdateUI();
-
-
+        SetupGrid();
         CreateCards();
         ShuffleCards();
 
-        finalUI.gameObject.SetActive(false);
+        UpdateUI();
     }
 
 
-void UpdateUI()
-{
-    scoreText.text = "Score: " + score;
-    turnText.text = "Turns: " + turnCount;
-    comboText.text = "Combo: " + combo;
-}
-    // Update is called once per frame
-    void Update()
+    public void EnqueueFlippedCard(Card card)
     {
-       if(!isGameOver && !isLevelFinished)
+        flipQueue.Enqueue(card);
+
+        if (!isProcessing)
+            StartCoroutine(ProcessFlipQueue());
+    }
+
+    IEnumerator ProcessFlipQueue()
+    {
+        isProcessing = true;
+
+        while (flipQueue.Count >= 2)
         {
-            if (timer > 0)
+            Card c1 = flipQueue.Dequeue();
+            Card c2 = flipQueue.Dequeue();
+
+            turnCount++;
+
+            if (c1.cardId == c2.cardId)
             {
-                timer -= Time.deltaTime;
-                UpdateTimerText();
+                audioSource.PlayOneShot(matchSound);
+
+                combo++;
+                score += 10 * combo;
+
+                c1.isMatched = true;
+                c2.isMatched = true;
+
+                StartCoroutine(c1.MatchEffect());
+                StartCoroutine(c2.MatchEffect());
+
+                pairsMatched++;
+
+                UpdateUI();
+
+                if (pairsMatched == totalPairs)
+                    LevelFinished();
             }
             else
             {
-                GameOver();
+                combo = 0;
+                UpdateUI();
+
+                audioSource.PlayOneShot(mismatchSound);
+
+                yield return new WaitForSeconds(0.6f);
+
+                c1.HideCard();
+                c2.HideCard();
             }
+
+            yield return null;
         }
+
+        isProcessing = false;
     }
+
+
+    void SetupGrid()
+    {
+        GridLayoutGroup grid = cardHolder.GetComponent<GridLayoutGroup>();
+        RectTransform rt = cardHolder.GetComponent<RectTransform>();
+
+        float width = rt.rect.width;
+        float height = rt.rect.height;
+
+        float padding = 100f;
+
+        grid.padding = new RectOffset((int)padding, (int)padding, (int)padding, (int)padding);
+
+        float cellWidth = (width - padding * 2 - spacing * (columns - 1)) / columns;
+        float cellHeight = (height - padding * 2 - spacing * (rows - 1)) / rows;
+
+        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        grid.constraintCount = columns;
+
+        grid.spacing = new Vector2(spacing, spacing);
+        grid.cellSize = new Vector2(cellWidth, cellHeight);
+    }
+
 
     void CreateCards()
     {
-        for (int i = 0; i <cardFaces.Length / 2; i++)
+        int totalCards = rows * columns;
+
+        cardIds.Clear();
+        cards.Clear();
+
+        for (int i = 0; i < totalCards / 2; i++)
         {
             cardIds.Add(i);
             cardIds.Add(i);
         }
 
-        foreach (int id in cardIds)
+        for (int i = 0; i < totalCards; i++)
         {
-            Card newCard = Instantiate(cardPrefab, cardHolder);
-            newCard.cardId = id;
-            newCard.gameManager = this;
-            cards.Add(newCard);
+            Card c = Instantiate(cardPrefab, cardHolder);
+            c.gameManager = this;
+            cards.Add(c);
         }
+
+        totalPairs = totalCards / 2;
     }
 
     void ShuffleCards()
     {
-        for (int i = 0; i < cards.Count; i++)
+        for (int i = 0; i < cardIds.Count; i++)
         {
-            int randomIndex = Random.Range(i, cardIds.Count);
+            int r = Random.Range(0, cardIds.Count);
             int temp = cardIds[i];
-            cardIds[i] = cardIds[randomIndex];
-            cardIds[randomIndex] = temp;
+            cardIds[i] = cardIds[r];
+            cardIds[r] = temp;
         }
 
         for (int i = 0; i < cards.Count; i++)
@@ -129,114 +198,65 @@ void UpdateUI()
         }
     }
 
-    public void CardFlipped(Card flippedCard)
+
+    void UpdateUI()
     {
-        if (firstCard == null)
-        {
-            firstCard = flippedCard;
-        }
-        else if (secondCard == null)
-        {
-            secondCard = flippedCard;
-            CheckMatch();
-        }
+        scoreText.text = "Score: " + score;
+        turnText.text = "Turns: " + turnCount;
+        comboText.text = "Combo: " + combo;
     }
 
-    void CheckMatch()
+    void Update()
     {
-         turnCount++; 
-        if (firstCard.cardId == secondCard.cardId)
+        if (!isGameOver && !isLevelFinished)
         {
-                    audioSource.PlayOneShot(matchSound);
+            timer -= Time.deltaTime;
+            TimerText.text = "Time: " + Mathf.Round(timer);
 
-                    combo++;   // increase combo streak
-
-        score += 10 * combo;
-            pairsMatched++;
-
-            UpdateUI();
-
-            if (pairsMatched == totalPairs)
-            {
-                LevelFinished();
-            }
-            firstCard = null;
-            secondCard = null;
+            if (timer <= 0)
+                GameOver();
         }
-        else
-        {
-                    audioSource.PlayOneShot(mismatchSound);
-
-                    combo = 0; // reset combo on fail
-
-        UpdateUI();
-            StartCoroutine(FlipBackCards());
-        }
-    }
-
-    IEnumerator FlipBackCards()
-    {
-        yield return new WaitForSeconds(1f);
-        firstCard.HideCard();
-        secondCard.HideCard();
-        firstCard = null;
-        secondCard = null;
     }
 
     void GameOver()
     {
         isGameOver = true;
-            audioSource.PlayOneShot(loseSound);
+        audioSource.PlayOneShot(loseSound);
 
-        FinalPanel();
+        finalUI.SetActive(true);
+        finalText.text = "Time's Up! Game Over!";
     }
 
     void LevelFinished()
     {
         isLevelFinished = true;
-            audioSource.PlayOneShot(winSound);
+        audioSource.PlayOneShot(winSound);
 
-        FinalPanel();
+        finalUI.SetActive(true);
+        finalText.text = "Congratulations! You Win!";
     }
 
-    void FinalPanel()
-    {
-        finalUI.gameObject.SetActive(true);
-        if (isLevelFinished)
-        {
-            finalText.text = "Congratulations! You Win! " + Mathf.Round(timer) + " seconds remaining.";
-        }
-        else if (!isGameOver)
-        {
-            finalText.text = "Time's Up! Game Over!";
-        }
-    }
 
     public void RestartGame()
     {
+        foreach (Card c in cards)
+            Destroy(c.gameObject);
+
+        cards.Clear();
+        flipQueue.Clear();
+
+        score = combo = turnCount = 0;
         pairsMatched = 0;
-        timer = maxTime;
+
         isGameOver = false;
         isLevelFinished = false;
-        finalUI.gameObject.SetActive(false);
-        score = 0;
-turnCount = 0;
-combo = 0;
-UpdateUI();
 
-        foreach(var card in cards)
-        {
-            Destroy(card.gameObject);
-        }
-        cards.Clear();
-        cardIds.Clear();
+        timer = maxTime;
+
+        finalUI.SetActive(false);
+        UpdateUI();
 
         CreateCards();
         ShuffleCards();
-    }
-
-    void UpdateTimerText()
-    {
-        TimerText.text = "Time left : " + Mathf.Round(timer).ToString() + "s";
     }
 }

@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,31 +6,80 @@ public class Card : MonoBehaviour
 {
     public int cardId;
     public GameManagerCard gameManager;
-    private bool isFlipped;
     public Image cardImage;
+
+    public bool isFlipped = false;
+    public bool isMatched = false;
+
+    private bool isAnimating = false;
 
     void Start()
     {
-        isFlipped = false;
-        cardImage.sprite = GameManagerCard.Instance.cardBack;
+        cardImage.sprite = gameManager.cardBack;
     }
 
     public void FlipCard()
     {
-        
-            if(!isFlipped && (gameManager.firstCard == null || gameManager.secondCard == null))
-            {
-                isFlipped = true;
-                        GameManagerCard.Instance.audioSource.PlayOneShot(GameManagerCard.Instance.flipSound);
-                cardImage.sprite = gameManager.cardFaces[cardId];
-                gameManager.CardFlipped(this);
-            }
-        
+        if (isMatched || isAnimating) return;
+
+        if (!isFlipped)
+        {
+            StartCoroutine(FlipAnimation(gameManager.cardFaces[cardId], true));
+            gameManager.audioSource.PlayOneShot(gameManager.flipSound);
+            gameManager.EnqueueFlippedCard(this);
+        }
+    }
+
+    public IEnumerator FlipAnimation(Sprite newSprite, bool flipUp)
+    {
+        isAnimating = true;
+
+        for (float t = 1f; t >= 0f; t -= Time.deltaTime * 6)
+        {
+            transform.localScale = new Vector3(1, t, 1);
+            yield return null;
+        }
+
+        cardImage.sprite = newSprite;
+
+        for (float t = 0f; t <= 1f; t += Time.deltaTime * 6)
+        {
+            transform.localScale = new Vector3(1, t, 1);
+            yield return null;
+        }
+
+        isFlipped = flipUp;
+        isAnimating = false;
+    }
+
+    public IEnumerator MatchEffect()
+    {
+        isMatched = true;
+        isFlipped = true;  
+        isAnimating = true;
+
+        cardImage.color = new Color(1f, 1f, 0.5f);
+
+        for (float t = 1f; t <= 1.2f; t += Time.deltaTime * 8)
+        {
+            transform.localScale = new Vector3(t, t, 1);
+            yield return null;
+        }
+        for (float t = 1.2f; t >= 1f; t -= Time.deltaTime * 8)
+        {
+            transform.localScale = new Vector3(t, t, 1);
+            yield return null;
+        }
+
+        cardImage.color = Color.white;
+
+        isAnimating = false;
     }
 
     public void HideCard()
     {
-        isFlipped = false;
-        cardImage.sprite = gameManager.cardBack;
+        if (isAnimating) return;
+
+        StartCoroutine(FlipAnimation(gameManager.cardBack, false));
     }
 }
